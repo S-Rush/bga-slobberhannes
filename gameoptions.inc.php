@@ -52,7 +52,15 @@ $game_options = array(
             ),
 
     */
-
+    100 => array(
+        'name' => totranslate('Game length'),
+        'values' => array(
+                1 => array( 'name' => totranslate( 'Short game (6 points)' ) ),
+                2 => array( 'name' => totranslate( 'Standard game (10 points)' ) ),
+                3 => array( 'name' => totranslate( 'Extended game (16 points)' ) ),
+        ),
+        'default' => 1
+)
 );
 
 
