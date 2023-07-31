@@ -69,4 +69,154 @@
 
 
 
+#playertables {
+    position: relative;
+    width: 710px;
+    /*height: 340px;*/
+    margin-left: auto;
+	margin-right: auto;
+}
+
+.playertables_normal {
+    height: 340px;
+}
+
+.playertables_5p {
+    height: 425px;
+}
+
+.playertables_6p {
+    height: 510px;
+}
+
+.playertablename {
+    font-weight: bold;
+}
+
+.playertable {
+    position: absolute;
+    text-align: center;
+    width: 180px;
+    height: 130px;
+}
+
+/*
+    4-player table positions
+*/
+.playertable_N {
+    left: 50%;
+    top: 0px;
+    margin-left: -100px; /* half of 180 + 20 */
+}
+.playertable_S {
+    left: 50%;
+    bottom: 0px;
+    margin-left: -100px; /* half of 180 + 20 */
+}
+.playertable_W {
+    left: 0px;
+    top: 50%;
+    margin-top: -75px; /* half of 130 + 20 */
+}
+.playertable_E {
+    right: 0px;
+    top: 50%;
+    margin-top: -75px; /* half of 130 + 20 */
+}
+
+/*
+    3-player table positions
+*/
+.playertable_3p_S {
+    left: 50%;
+    bottom: 0px;
+    margin-left: -90px; /* half of 180 + 20 */
+}
+.playertable_3p_W {
+    left: 0px;
+    top: 0px;
+}
+.playertable_3p_E {
+    right: 0px;
+    top: 0px;
+}
+/*
+    5-player table positions
+*/
+.playertable_5p_S {
+    left: 50%;
+    bottom: 0px;
+    margin-left: -100px; /* half of 180 + 20 */
+}
+.playertable_5p_SW {
+    left: 0px;
+    top: 65%;
+    margin-top: -75px; /* half of 130 + 20 */
+}
+.playertable_5p_NW {
+    left: 30%;
+    margin-left: -100px;
+    top: 0px;
+}
+.playertable_5p_NE {
+    left: 70%;
+    margin-left: -100px;
+    top: 0;
+}
+.playertable_5p_SE {
+    right: 0px;
+    top: 65%;
+    margin-top: -75px; /* half of 130 + 20 */
+}
+
+/*
+    6-player table positions
+*/
+.playertable_6p_S {
+    left: 50%;
+    bottom: 0px;
+    margin-left: -100px; /* half of 180 + 20 */
+}
+.playertable_6p_SW {
+    left: 0px;
+    top: 70%;
+    margin-top: -75px; /* half of 130 + 20 */
+}
+.playertable_6p_NW {
+    left: 0px;
+    top: 30%;
+    margin-top: -75px; /* half of 130 + 20 */
+}
+.playertable_6p_N {
+    left: 50%;
+    top: 0px;
+    margin-left: -100px; /* half of 180 + 20 */
+}
+.playertable_6p_NE {
+    right: 0px;
+    top: 30%;
+    margin-top: -75px; /* half of 130 + 20 */
+}
+.playertable_6p_SE {
+    right: 0px;
+    top: 70%;
+    margin-top: -75px; /* half of 130 + 20 */
+}
+
+.playertablecard {
+    display: inline-block;
+    position: relative;
+    margin-top: 5px;
+    width: 72px;
+    height: 96px;
+}
+
+/*** cards on table ***/
+
+.cardontable {
+    position: absolute;
+    width: 72px;
+    height: 96px;
+    background-image: url('img/cards.jpg'); 
+}
 

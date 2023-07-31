@@ -42,6 +42,29 @@ class view_slobberhannes_slobberhannes extends game_view
 
         /*********** Place your code below:  ************/
 
+        // Arrange players so that I am on south
+        $player_to_dir = $this->game->getPlayersToDirectionString();
+
+        $this->page->begin_block( "slobberhannes_slobberhannes", "player" );
+        foreach( $player_to_dir as $player_id => $dir )
+        {
+            $this->page->insert_block( "player", array( "PLAYER_ID" => $player_id,
+                                                        "PLAYER_NAME" => $players[$player_id]['player_name'],
+                                                        "PLAYER_COLOR" => $players[$player_id]['player_color'],
+                                                        "DIR" => $dir ) );
+        }
+        
+        $table_size_class = 'playertables_normal';
+        if ($players_nbr == 5)
+        {
+            $table_size_class = 'playertables_5p';
+        }
+        else if ($players_nbr == 6)
+        {
+            $table_size_class = 'playertables_6p';
+        }
+        $this->tpl['TABLE_SIZE_CLASS'] = $table_size_class;
+        $this->tpl['MY_HAND'] = self::_("My hand");
 
         /*
         

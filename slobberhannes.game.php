@@ -147,6 +147,64 @@ class Slobberhannes extends Table
         In this space, you can put any utility methods useful for your game logic
     */
 
+    // Return players => direction (N/S/E/W) from the point of view
+    //  of current player (current player must be on south)
+    // 3 players -> 3p_S, 3p_W, 3p_E
+    // 4 players -> S, W, N, E
+    // 5 players -> 5p_S, 5p_SW, 5p_NW, 5p_NE, 5p_SE
+    // 6 players -> 6p_S, 6p_SW, 6p_NW, 6p_N, 6p_NE, 6p_SE
+    function getPlayersToDirectionString()
+    {
+        $result = array();
+    
+        $players = self::loadPlayersBasicInfos();
+        $players_nbr = count( $players );
+        $nextPlayer = self::createNextPlayerTable( array_keys( $players ) );
+
+        $current_player = self::getCurrentPlayerId();
+        
+        if (3 == $players_nbr)
+        {
+            $directions = array( '3p_S', '3p_W', '3p_E' );
+        }
+        else if (4 == $players_nbr)
+        {
+            $directions = array( 'S', 'W', 'N', 'E' );
+        }
+        else if (5 == $players_nbr)
+        {
+            $directions = array( '5p_S', '5p_SW', '5p_NW', '5p_NE', '5p_SE' );
+        }
+        else if (6 == $players_nbr)
+        {
+            $directions = array( '6p_S', '6p_SW', '6p_NW', '6p_N', '6p_NE', '6p_SE' );
+        }
+        else
+        {
+            throw new BgaVisibleSystemException ( self::_("Player count is not supported") );
+        }
+        
+        if( ! isset( $nextPlayer[ $current_player ] ) )
+        {
+            // Spectator mode: take any player for south
+            $player_id = $nextPlayer[0];
+            $result[ $player_id ] = array_shift( $directions );
+        }
+        else
+        {
+            // Normal mode: current player is on south
+            $player_id = $current_player;
+            $result[ $player_id ] = array_shift( $directions );
+        }
+        
+        while( count( $directions ) > 0 )
+        {
+            $player_id = $nextPlayer[ $player_id ];
+            $result[ $player_id ] = array_shift( $directions );
+        }
+        return $result;
+    }
+
 
 
 //////////////////////////////////////////////////////////////////////////////
