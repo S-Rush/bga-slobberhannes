@@ -145,6 +145,11 @@ class Slobberhannes extends Table
         $result['players'] = self::getCollectionFromDb( $sql );
   
         // TODO: Gather all information about current game situation (visible by player $current_player_id).
+         // Cards in player hand      
+         $result['hand'] = $this->cards->getCardsInLocation( 'hand', $current_player_id );
+  
+         // Cards played on the table
+         $result['cardsontable'] = $this->cards->getCardsInLocation( 'cardsontable' );
   
         return $result;
     }
@@ -284,6 +289,126 @@ class Slobberhannes extends Table
     
     */
 
+        // Play a card from player hand
+        function playCard( $card_id )
+        {
+            self::checkAction( "playCard" );
+            
+            $player_id = self::getActivePlayerId();
+            
+            // Get all cards in player hand
+            // (note: we must get ALL cards in player's hand in order to check if the card played is correct)
+            
+            $playerhands = $this->cards->getCardsInLocation( 'hand', $player_id );
+    
+            $bFirstCard = ( count( $playerhands ) == $this->getHandSize() );
+                    
+            $currentTrickColor = self::getGameStateValue( 'trickColor' ) ;
+                    
+            // Check that the card is in this hand
+            $bIsInHand = false;
+            $currentCard = null;
+            $bAtLeastOneCardOfCurrentTrickColor = false;
+            //$bAtLeastOneCardWithoutPoints = false;
+            //$bAtLeastOneCardNotHeart = false;
+            foreach( $playerhands as $card )
+            {
+                if( $card['id'] == $card_id )
+                {
+                    $bIsInHand = true;
+                    $currentCard = $card;
+                }
+                
+                if( $card['type'] == $currentTrickColor )
+                    $bAtLeastOneCardOfCurrentTrickColor = true;
+    
+                /*if( $card['type'] != 2 )
+                    $bAtLeastOneCardNotHeart = true;
+                    
+                if( $card['type'] == 2 || ( $card['type'] == 1 && $card['type_arg'] == 12  ) )
+                {
+                    // This is a card with point
+                }
+                else
+                    $bAtLeastOneCardWithoutPoints = true;*/
+            }
+            if( ! $bIsInHand )
+                throw new BgaUserException( "This card is not in your hand" );
+                
+            /*if( $this->cards->countCardInLocation( 'hand' ) == 52 )
+            {
+                // If this is the first card of the hand, it must be 2-club
+                // Note: first card of the hand <=> cards on hands == 52
+    
+                if( $currentCard['type'] != 3 || $currentCard['type_arg'] != 2 ) // Club 2
+                    throw new feException( self::_("You must play the Club-2"), true );                
+            }
+            else */ if( $currentTrickColor == 0 )
+            {
+                // Otherwise, if this is the first card of the trick, any cards can be played
+                // except a Heart if:
+                // _ no heart has been played, and
+                // _ player has at least one non-heart
+                /*if( self::getGameStateValue( 'alreadyPlayedHearts')==0
+                 && $currentCard['type'] == 2   // this is a heart
+                 && $bAtLeastOneCardNotHeart )
+                {
+                    throw new feException( self::_("You can't play a heart to start the trick if no heart has been played before"), true );
+                }*/
+            }
+            else
+            {
+                // The trick started before => we must check the color
+                if( $bAtLeastOneCardOfCurrentTrickColor )
+                {
+                    if( $currentCard['type'] != $currentTrickColor )
+                        throw new BgaUserException ( sprintf( self::_("You must play a %s"), $this->colors[ $currentTrickColor ]['nametr'] ), true );
+                }
+                else
+                {
+                    // The player has no card of current trick color => he can plays what he want to
+                    
+                    /*if( $bFirstCard && $bAtLeastOneCardWithoutPoints )
+                    {
+                        // ...except if it is the first card played by this player during this hand
+                        // (it is forbidden to play card with points during the first trick)
+                        // (note: if player has only cards with points, this does not apply)
+                        
+                        if( $currentCard['type'] == 2 || ( $currentCard['type'] == 1 && $currentCard['type_arg'] == 12  ) )
+                        {
+                            // This is a card with point                  
+                            throw new feException( self::_("You can't play cards with points during the first trick"), true );
+                        }
+                    }*/
+                }
+            }
+            
+            // Checks are done! now we can play our card
+            $this->cards->moveCard( $card_id, 'cardsontable', $player_id );
+            
+            // Set the trick color if it hasn't been set yet
+            if( $currentTrickColor == 0 )
+                self::setGameStateValue( 'trickColor', $currentCard['type'] );
+            
+            /*if( $currentCard['type'] == 2 )
+                self::setGameStateValue( 'alreadyPlayedHearts', 1 );*/
+            
+            // And notify
+            self::notifyAllPlayers( 'playCard', clienttranslate('${player_name} plays ${value_displayed} ${color_displayed}'), array(
+                'i18n' => array( 'color_displayed', 'value_displayed' ),
+                'card_id' => $card_id,
+                'player_id' => $player_id,
+                'player_name' => self::getActivePlayerName(),
+                'value' => $currentCard['type_arg'],
+                'value_displayed' => $this->values_label[ $currentCard['type_arg'] ],
+                'color' => $currentCard['type'],
+                'color_displayed' => $this->colors[ $currentCard['type'] ]['name']
+            ) );
+            
+            // Next player
+            $this->gamestate->nextState( 'playCard' );
+        }
+
     
 //////////////////////////////////////////////////////////////////////////////
 //////////// Game state arguments
@@ -333,6 +458,353 @@ class Slobberhannes extends Table
         $this->gamestate->nextState( 'some_gamestate_transition' );
     }    
     */
+    function stNewHand()
+    {
+    
+        // Take back all cards (from any location => null) to deck
+        $this->cards->moveAllCardsInLocation( null, "deck" );
+        $this->cards->shuffle( 'deck' );
+    
+        // Deal 13 cards to each players
+        // Create deck, shuffle it and give 13 initial cards
+        $players = self::loadPlayersBasicInfos();
+        foreach( $players as $player_id => $player )
+        {
+            $cards = $this->cards->pickCards( $this->getHandSize(), 'deck', $player_id );
+            
+            // Notify player about his cards
+            self::notifyPlayer( $player_id, 'newHand', '', array( 
+                'cards' => $cards
+            ) );
+        }        
+        
+
+        $this->gamestate->nextState( "" );
+    }
+	
+	function stNewTrick()
+	{
+        self::setGameStateValue( 'trickColor', 0 );
+		$this->gamestate->nextState( );
+	}
+	
+	function stNextPlayer()
+	{
+		$players = self::loadPlayersBasicInfos();
+        $players_nbr = count($players);
+        if( $this->cards->countCardInLocation( 'cardsontable' ) == $players_nbr ) // everyone has played
+        {
+            $bIsFirstTrick = ($this->cards->countCardInLocation( 'cardswon' ) == 0);
+            $bIsLastTrick = ($this->cards->countCardInLocation( 'hand' ) == 0);
+            $bContainsQueenOfClubs = 0;
+            // This is the end of the trick
+            // Who wins ?
+            
+            $cards_on_table = $this->cards->getCardsInLocation( 'cardsontable' );
+            $best_value = 0;
+            $best_value_player_id = null;
+            $currentTrickColor = self::getGameStateValue( 'trickColor' );
+            
+            foreach( $cards_on_table as $card )
+            {
+                if ( $card['type'] == 3 && $card['type_arg'] == 12)
+                {
+                    $bContainsQueenOfClubs = 1;
+                }
+                if( $card['type'] == $currentTrickColor )   // Note: type = card color
+                {
+                    if( $best_value_player_id === null )
+                    {
+                        $best_value_player_id = $card['location_arg'];  // Note: location_arg = player who played this card on table
+                        $best_value = $card['type_arg'];        // Note: type_arg = value of the card
+                    }
+                    else if( $card['type_arg'] > $best_value )
+                    {
+                        $best_value_player_id = $card['location_arg'];  // Note: location_arg = player who played this card on table
+                        $best_value = $card['type_arg'];        // Note: type_arg = value of the card
+                    }
+                }
+            }
+            
+            if( $best_value_player_id === null )
+                throw new  BgaVisibleSystemException ( self::_("Error, nobody wins the trick") );
+            
+            
+            // Move all cards to "cardswon" of the given player
+            $this->cards->moveAllCardsInLocation( 'cardsontable', 'cardswon', null, $best_value_player_id );
+
+            if ($bIsFirstTrick) self::setGameStateValue('playerTookFirstTrick', $best_value_player_id);
+            if ($bIsLastTrick) self::setGameStateValue('playerTookLastTrick', $best_value_player_id);
+            if ($bContainsQueenOfClubs) self::setGameStateValue('playerTookQueenOfClubs', $best_value_player_id);
+
+            // Notify
+            // Note: we use 2 notifications here in order we can pause the display during the first notification
+            //  before we move all cards to the winner (during the second)
+            $players = self::loadPlayersBasicInfos();
+            self::notifyAllPlayers( 'trickWin', clienttranslate('${player_name} wins the trick'), array(
+                'player_id' => $best_value_player_id,
+                'player_name' => $players[ $best_value_player_id ]['player_name']
+            ) );            
+            self::notifyAllPlayers( 'giveAllCardsToPlayer','', array(
+                'player_id' => $best_value_player_id
+            ) );
+
+            // Active this player => he's the one who starts the next trick
+            $this->gamestate->changeActivePlayer( $best_value_player_id );
+            
+            if( $bIsLastTrick )
+            {
+                // End of the hand
+                $this->gamestate->nextState( "endHand" );
+            }
+            else
+            {
+                // End of the trick
+                $this->gamestate->nextState( "nextTrick" );
+            }
+        }
+        else
+        {
+
+            $player_id = $this->activeNextPlayer();
+            self::giveExtraTime( $player_id );
+            //$this->gamestate->changeActivePlayer( $player_id );
+
+            $this->gamestate->nextState( 'nextPlayer' );        
+        }
+	}
+	
+	function stEndHand()
+	{
+		// Count and score points, then end the game or go to the next hand.
+                
+        $players = self::loadPlayersBasicInfos();
+        
+        // Gets all "hearts" + queen of spades
+        /*$player_with_queen_of_spades = null;
+        $player_to_hearts = array();
+        $player_to_points = array();
+        foreach( $players as $player_id => $player )
+        {
+            $player_to_hearts[ $player_id ] = 0;
+            $player_to_points[ $player_id ] = 0;
+        }   */
+        
+        /*$cards = $this->cards->getCardsInLocation( "cardswon" );
+        foreach( $cards as $card )
+        {
+            $player_id = $card['location_arg'];
+            
+            if( $card['type'] == 1 && $card['type_arg'] == 12 )    // Note: 1 = spade && 12 = queen
+            {
+                // Queen of club => 13 points
+                $player_to_points[ $player_id ] += 13;
+                $player_with_queen_of_spades = $player_id;
+            }
+            else if( $card['type'] == 2 )   // Note: 2 = heart
+            {
+                $player_to_hearts[ $player_id ] ++;                    
+                $player_to_points[ $player_id ] ++; 
+            }
+        }*/
+
+        /*
+                self::setGameStateInitialValue( 'playerTookFirstTrick', 0 );
+        self::setGameStateInitialValue( 'playerTookQueenOfClubs', 0 );
+        self::setGameStateInitialValue( 'playerTookLastTrick', 0 );
+        */
+        
+
+        
+        // If someone gets all hearts and the queen of club => 26 points for eveyone
+        //$nbr_nonzero_score = 0;
+        $player_to_points = array();
+        foreach( $players as $player_id => $player )
+        {
+            $playerPenaltyPoints = 0;
+            if ($player_id == self::getGameStateValue('playerTookFirstTrick'))
+            {
+                self::notifyAllPlayers( "penalty", clienttranslate( '${player_name} took the first trick penalty and loses 1 point' ), array(
+                    'player_id' => $player_id,
+                    'player_name' => $players[ $player_id ]['player_name'],
+                ) );
+                $playerPenaltyPoints--;
+            }
+            if ($player_id == self::getGameStateValue('playerTookLastTrick'))
+            {
+                self::notifyAllPlayers( "penalty", clienttranslate( '${player_name} took the last trick penalty and loses 1 point' ), array(
+                    'player_id' => $player_id,
+                    'player_name' => $players[ $player_id ]['player_name'],
+                ) );
+                $playerPenaltyPoints--;
+            }
+            if ($player_id == self::getGameStateValue('playerTookQueenOfClubs'))
+            {
+                self::notifyAllPlayers( "penalty", clienttranslate( '${player_name} took the Queen of Clubs and loses 1 point' ), array(
+                    'player_id' => $player_id,
+                    'player_name' => $players[ $player_id ]['player_name'],
+                ) );
+                $playerPenaltyPoints--;
+            } 
+            if (-3 == $playerPenaltyPoints)
+            {
+                // Slobberhannes penalty
+                self::notifyAllPlayers( "penalty", clienttranslate( '${player_name} takes all three penalties, incurring the Slobberhannes penalty! ${player_name} loses an additional 1 point' ), array(
+                    'player_id' => $player_id,
+                    'player_name' => $players[ $player_id ]['player_name'],
+                ) );
+                $playerPenaltyPoints--;
+            }
+            $player_to_points[$player_id] = $playerPenaltyPoints;
+            /*if( $points != 0 )
+                $nbr_nonzero_score ++;*/
+        }
+
+        /*$bOnePlayerGetsAll = ( $nbr_nonzero_score == 1 );
+
+        if( $bOnePlayerGetsAll )
+        {
+            // Only 1 player score points during this hand
+            // => he score 0 and everyone scores -26
+            foreach( $player_to_hearts as $player_id => $points )
+            {
+                if( $points != 0 )
+                {
+                    $player_to_points[ $player_id ] = 0;
+
+                    // Notify it!
+                    self::notifyAllPlayers( "onePlayerGetsAll", clienttranslate( '${player_name} gets all hearts and the Queen of Spades: everyone else loose 26 points!' ), array(
+                        'player_id' => $player_id,
+                        'player_name' => $players[ $player_id ]['player_name']
+                    ) );
+                    
+                    self::incStat( 1, "getAllPointCards", $player_id );
+                }
+                else
+                    $player_to_points[ $player_id ] = 26;
+            }                
+        }*/
+        
+        // Apply scores to player
+        foreach( $player_to_points as $player_id => $points )
+        {
+            if( $points != 0 )
+            {
+                $sql = "UPDATE player SET player_score=player_score+$points
+                        WHERE player_id='$player_id' " ;
+                self::DbQuery( $sql );
+
+                // Now, notify about the point lost.                
+                /*if( ! $bOnePlayerGetsAll )  // Note: if one player gets all, we already notify everyone so there's no need to send additional notifications
+                {
+                    $heart_number = $player_to_hearts[ $player_id ];
+                    if( $player_id == $player_with_queen_of_spades )
+                    {
+                        self::notifyAllPlayers( "points", clienttranslate( '${player_name} gets ${nbr} hearts and the Queen of Spades and looses ${points} points' ), array(
+                            'player_id' => $player_id,
+                            'player_name' => $players[ $player_id ]['player_name'],
+                            'nbr' => $heart_number,
+                            'points' => $points
+                        ) );
+                    }
+                    else
+                    {
+                        self::notifyAllPlayers( "points", clienttranslate( '${player_name} gets ${nbr} hearts and looses ${nbr} points' ), array(
+                            'player_id' => $player_id,
+                            'player_name' => $players[ $player_id ]['player_name'],
+                            'nbr' => $heart_number
+                        ) );
+                    }
+                }*/
+            }
+            else
+            {
+                // No point lost (just notify)
+                self::notifyAllPlayers( "points", clienttranslate( '${player_name} did not take any penalties' ), array(
+                    'player_id' => $player_id,
+                    'player_name' => $players[ $player_id ]['player_name']
+                ) );
+                
+                //self::incStat( 1, "getNoPointCards", $player_id );
+            }
+        }
+
+        $newScores = self::getCollectionFromDb( "SELECT player_id, player_score FROM player", true );
+        self::notifyAllPlayers( "newScores", '', array( 'newScores' => $newScores ) );
+        
+        //////////// Display table window with results /////////////////
+        /*$table = array();
+
+        // Header line
+        $firstRow = array( '' );
+        foreach( $players as $player_id => $player )
+        {
+            $firstRow[] = array( 'str' => '${player_name}',
+                                 'args' => array( 'player_name' => $player['player_name'] ),
+                                 'type' => 'header'
+                               );
+        }
+        $table[] = $firstRow;
+
+        // Hearts
+        $newRow = array( array( 'str' => clienttranslate('Hearts'), 'args' => array() ) );
+        foreach( $player_to_hearts as $player_id => $hearts )
+        {
+            $newRow[] = $hearts;
+            
+            if( $hearts > 0 )
+                self::incStat( $hearts, "getHearts", $player_id );
+        }
+        $table[] = $newRow;
+
+        // Queen of spades
+        $newRow = array( array( 'str' => clienttranslate('Queen of Spades'), 'args' => array() ) );
+        foreach( $player_to_hearts as $player_id => $hearts )
+        {
+            if( $player_id == $player_with_queen_of_spades )
+            {
+                $newRow[] = '1';
+                self::incStat( 1, "getQueenOfSpade", $player_id );
+            }
+            else
+                $newRow[] = '0';
+        }
+        $table[] = $newRow;
+
+        // Points
+        $newRow = array( array( 'str' => clienttranslate('Points'), 'args' => array() ) );
+        foreach( $player_to_points as $player_id => $points )
+        {
+            $newRow[] = $points;
+        }
+        $table[] = $newRow;
+
+        
+        $this->notifyAllPlayers( "tableWindow", '', array(
+            "id" => 'finalScoring',
+            "title" => clienttranslate("Result of this hand"),
+            "table" => $table
+        ) ); */
+        
+        // Change the "type" of the next hand
+        /*$handType = self::getGameStateValue( "currentHandType" );
+        self::setGameStateValue( "currentHandType", ($handType+1)%4 );*/
+        
+        ///// Test if this is the end of the game
+        foreach( $newScores as $player_id => $score )
+        {
+            if( $score <= 0 )
+            {
+                // Trigger the end of the game !
+                $this->gamestate->nextState( "endGame" );
+                return ;
+            }
+        }
+
+        // Otherwise... new hand !
+        $this->gamestate->nextState( "nextHand" );
+	}
+	
 
 //////////////////////////////////////////////////////////////////////////////
 //////////// Zombie
