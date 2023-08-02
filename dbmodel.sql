@@ -33,10 +33,6 @@
 -- Example 2: add a custom field to the standard "player" table
 -- ALTER TABLE `player` ADD `player_my_custom_field` INT UNSIGNED NOT NULL DEFAULT '0';
 
-ALTER TABLE `player` ADD `player_took_first_trick` BOOLEAN NOT NULL DEFAULT '0';
-ALTER TABLE `player` ADD `player_took_last_trick` BOOLEAN NOT NULL DEFAULT '0';
-ALTER TABLE `player` ADD `player_took_queen_of_clubs` BOOLEAN NOT NULL DEFAULT '0';
-
 
 CREATE TABLE IF NOT EXISTS `card` (
   `card_id` int(10) unsigned NOT NULL AUTO_INCREMENT,

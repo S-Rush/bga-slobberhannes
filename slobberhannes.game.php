@@ -39,7 +39,14 @@ class Slobberhannes extends Table
             //    "my_first_game_variant" => 100,
             //    "my_second_game_variant" => 101,
             //      ...
+            "trickColor" => 10,
+            "playerTookFirstTrick" => 11,
+            "playerTookQueenOfClubs" => 12,
+            "playerTookLastTrick" => 13,
+            "gameLength" => 100
         ) );        
+        $this->cards = self::getNew( "module.common.deck" );
+        $this->cards->init( "card" );
 	}
 	
     protected function getGameName( )
