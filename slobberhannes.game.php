@@ -96,7 +96,27 @@ class Slobberhannes extends Table
         //self::initStat( 'player', 'player_teststat1', 0 );  // Init a player statistics (for all players)
 
         // TODO: setup the initial game situation here
-       
+        self::setGameStateInitialValue( 'trickColor', 0 );
+        self::setGameStateInitialValue( 'playerTookFirstTrick', 0 );
+        self::setGameStateInitialValue( 'playerTookQueenOfClubs', 0 );
+        self::setGameStateInitialValue( 'playerTookLastTrick', 0 );
+
+         // Create cards
+         $players_nbr = count( $players );
+         $cards = array();
+         foreach( $this->colors as  $color_id => $color ) // spade, heart, diamond, club
+         {
+             for( $value=7; $value<=14; $value++ )   //  7, 8, ... K, A
+             {
+                if (4 != $players_nbr && 7 == $value && (1 == $color_id || 3 == $color_id)) // For 3, 5, or 6 players, exclude 7s of spades and clubs
+                {
+                    continue;
+                }
+                 $cards[] = array( 'type' => $color_id, 'type_arg' => $value, 'nbr' => 1);
+             }
+         }
+ 
+         $this->cards->createCards( $cards, 'deck' );
 
         // Activate first player (which is in general a good idea :) )
         $this->activeNextPlayer();
