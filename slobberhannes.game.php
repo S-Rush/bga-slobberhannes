@@ -70,14 +70,15 @@ class Slobberhannes extends Table
         $gameinfos = self::getGameinfos();
         $default_colors = $gameinfos['player_colors'];
  
+        $start_points = self::getStartingPointCount();
         // Create players
         // Note: if you added some extra field on "player" table in the database (dbmodel.sql), you can initialize it there.
-        $sql = "INSERT INTO player (player_id, player_color, player_canal, player_name, player_avatar) VALUES ";
+        $sql = "INSERT INTO player (player_id, player_score, player_color, player_canal, player_name, player_avatar) VALUES ";
         $values = array();
         foreach( $players as $player_id => $player )
         {
             $color = array_shift( $default_colors );
-            $values[] = "('".$player_id."','$color','".$player['player_canal']."','".addslashes( $player['player_name'] )."','".addslashes( $player['player_avatar'] )."')";
+            $values[] = "('".$player_id."','$start_points','$color','".$player['player_canal']."','".addslashes( $player['player_name'] )."','".addslashes( $player['player_avatar'] )."')";
         }
         $sql .= implode( ',', $values );
         self::DbQuery( $sql );
@@ -141,8 +142,10 @@ class Slobberhannes extends Table
     function getGameProgression()
     {
         // TODO: compute and return the game progression
+        $maxPoints = self::getStartingPointCount();
+        $minimumScore = self::getUniqueValueFromDb( "SELECT MIN( player_score ) FROM player" );
 
-        return 0;
+        return ($maxPoints - $minimumScore) / $maxPoints;
     }
 
 
@@ -212,7 +215,19 @@ class Slobberhannes extends Table
         return $result;
     }
 
+    function getStartingPointCount()
+    {
+		$start_points_value_map = array(0 => 10, 1 => 6, 2 => 10, 3 => 16);
+        return $start_points_value_map[self::getGameStateValue( 'gameLength' )];
+    }
 
+    function getHandSize()
+    {
+        $players = self::loadPlayersBasicInfos();
+        $players_nbr = count( $players );
+        $hand_size_map = array(3 => 10, 4=> 8, 5=> 6, 6 => 5);
+        return $hand_size_map[$players_nbr];
+    }
 
 //////////////////////////////////////////////////////////////////////////////
 //////////// Player actions
