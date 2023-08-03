@@ -694,7 +694,7 @@ class Slobberhannes extends Table
         self::notifyAllPlayers( "newScores", '', array( 'newScores' => $newScores ) );
         
         //////////// Display table window with results /////////////////
-        /*$table = array();
+        $table = array();
 
         // Header line
         $firstRow = array( '' );
@@ -707,49 +707,72 @@ class Slobberhannes extends Table
         }
         $table[] = $firstRow;
 
-        // Hearts
-        $newRow = array( array( 'str' => clienttranslate('Hearts'), 'args' => array() ) );
-        foreach( $player_to_hearts as $player_id => $hearts )
-        {
-            $newRow[] = $hearts;
-            
-            if( $hearts > 0 )
-                self::incStat( $hearts, "getHearts", $player_id );
-        }
-        $table[] = $newRow;
-
-        // Queen of spades
-        $newRow = array( array( 'str' => clienttranslate('Queen of Spades'), 'args' => array() ) );
-        foreach( $player_to_hearts as $player_id => $hearts )
-        {
-            if( $player_id == $player_with_queen_of_spades )
-            {
-                $newRow[] = '1';
-                self::incStat( 1, "getQueenOfSpade", $player_id );
-            }
-            else
-                $newRow[] = '0';
-        }
-        $table[] = $newRow;
-
-        // Points
-        $newRow = array( array( 'str' => clienttranslate('Points'), 'args' => array() ) );
+        // First trick
+        $newRow = array( array( 'str' => clienttranslate('First Trick'), 'args' => array() ) );
         foreach( $player_to_points as $player_id => $points )
         {
-            $newRow[] = $points;
+            if ($player_id == self::getGameStateValue('playerTookFirstTrick'))
+            {
+                $newRow[] = clienttranslate('Yes');
+            }
+            else
+            {
+                $newRow[] = '-';
+            }
         }
         $table[] = $newRow;
 
+        // Last trick
+        $newRow = array( array( 'str' => clienttranslate('Last Trick'), 'args' => array() ) );
+        foreach( $player_to_points as $player_id => $points )
+        {
+            if ($player_id == self::getGameStateValue('playerTookLastTrick'))
+            {
+                $newRow[] = clienttranslate('Yes');
+            }
+            else
+            {
+                $newRow[] = '-';
+            }
+        }
+        $table[] = $newRow;
+
+        // Queen of Clubs
+        $newRow = array( array( 'str' => clienttranslate('Queen of Clubs'), 'args' => array() ) );
+        foreach( $player_to_points as $player_id => $points )
+        {
+            if ($player_id == self::getGameStateValue('playerTookQueenOfClubs'))
+            {
+                $newRow[] = clienttranslate('Yes');
+            }
+            else
+            {
+                $newRow[] = '-';
+            }
+        }
+        $table[] = $newRow;
+
+        // Slobberhannes
+        $newRow = array( array( 'str' => clienttranslate('Slobberhannes'), 'args' => array() ) );
+        foreach( $player_to_points as $player_id => $points )
+        {
+            if ($points == -4)
+            {
+                $newRow[] = clienttranslate('Yes');
+            }
+            else
+            {
+                $newRow[] = '-';
+            }
+        }
+        $table[] = $newRow;
         
         $this->notifyAllPlayers( "tableWindow", '', array(
             "id" => 'finalScoring',
             "title" => clienttranslate("Result of this hand"),
-            "table" => $table
-        ) ); */
-        
-        // Change the "type" of the next hand
-        /*$handType = self::getGameStateValue( "currentHandType" );
-        self::setGameStateValue( "currentHandType", ($handType+1)%4 );*/
+            "table" => $table,
+            "closing" => clienttranslate ("OK")
+        ) ); 
         
         ///// Test if this is the end of the game
         foreach( $newScores as $player_id => $score )
