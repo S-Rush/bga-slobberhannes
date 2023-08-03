@@ -51,45 +51,32 @@ $stats_type = array(
 
     // Statistics global to table
     "table" => array(
-
-        "turns_number" => array("id"=> 10,
-                    "name" => totranslate("Number of turns"),
-                    "type" => "int" ),
-
-/*
-        Examples:
-
-
-        "table_teststat1" => array(   "id"=> 10,
-                                "name" => totranslate("table test stat 1"), 
+        "handNbr" => array(   "id"=> 10,
+                                "name" => totranslate("Number of hands"), 
                                 "type" => "int" ),
-                                
-        "table_teststat2" => array(   "id"=> 11,
-                                "name" => totranslate("table test stat 2"), 
-                                "type" => "float" )
-*/  
+
     ),
     
     // Statistics existing for each player
     "player" => array(
 
-        "turns_number" => array("id"=> 10,
-                    "name" => totranslate("Number of turns"),
-                    "type" => "int" ),
-    
-/*
-        Examples:    
-        
-        
-        "player_teststat1" => array(   "id"=> 10,
-                                "name" => totranslate("player test stat 1"), 
+        "getFirstTrick" => array(   "id"=> 10,
+                                "name" => totranslate("Take the first trick in a hand"), 
                                 "type" => "int" ),
-                                
-        "player_teststat2" => array(   "id"=> 11,
-                                "name" => totranslate("player test stat 2"), 
-                                "type" => "float" )
+        "getLastTrick" => array(   "id"=> 11,
+                                "name" => totranslate("Take the last trick in a hand"), 
+                                "type" => "int" ),
+        "getQueenOfClubs" => array(   "id"=> 12,
+                                "name" => totranslate("Take the Queen of Clubs in a hand"), 
+                                "type" => "int" ),
+        "getNoPenalties" => array(   "id"=> 13,
+                                "name" => totranslate("Receive no penalties in a hand"), 
+                                "type" => "int" ),
+        "getSlobberhannes" => array(   "id"=> 14,
+                                "name" => totranslate("Receive all penalties in a hand"), 
+                                "type" => "int" ),
+    
 
-*/    
     )
 
 );

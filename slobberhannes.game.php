@@ -102,8 +102,12 @@ class Slobberhannes extends Table
         
         // Init game statistics
         // (note: statistics used in this file must be defined in your stats.inc.php file)
-        //self::initStat( 'table', 'table_teststat1', 0 );    // Init a table statistics
-        //self::initStat( 'player', 'player_teststat1', 0 );  // Init a player statistics (for all players)
+        self::initStat( "table", "handNbr", 0 );
+        self::initStat( "player", "getFirstTrick", 0 );
+        self::initStat( "player", "getLastTrick", 0 );
+        self::initStat( "player", "getQueenOfClubs", 0 );
+        self::initStat( "player", "getNoPenalties", 0 );
+        self::initStat( "player", "getSlobberhannes", 0 );
 
         // TODO: setup the initial game situation here
         self::setGameStateInitialValue( 'trickColor', 0 );
@@ -605,6 +609,7 @@ class Slobberhannes extends Table
             }
             if ($player_id == self::getGameStateValue('playerTookLastTrick'))
             {
+                self::incStat( 1, "getLastTrick", $player_id );
                 self::notifyAllPlayers( "penalty", clienttranslate( '${player_name} took the last trick penalty and loses 1 point' ), array(
                     'player_id' => $player_id,
                     'player_name' => $players[ $player_id ]['player_name'],
@@ -613,6 +618,7 @@ class Slobberhannes extends Table
             }
             if ($player_id == self::getGameStateValue('playerTookQueenOfClubs'))
             {
+                self::incStat( 1, "getQueenOfClubs", $player_id );
                 self::notifyAllPlayers( "penalty", clienttranslate( '${player_name} took the Queen of Clubs and loses 1 point' ), array(
                     'player_id' => $player_id,
                     'player_name' => $players[ $player_id ]['player_name'],
@@ -622,42 +628,24 @@ class Slobberhannes extends Table
             if (-3 == $playerPenaltyPoints)
             {
                 // Slobberhannes penalty
+                self::incStat( 1, "getSlobberhannes", $player_id );
                 self::notifyAllPlayers( "penalty", clienttranslate( '${player_name} takes all three penalties, incurring the Slobberhannes penalty! ${player_name} loses an additional 1 point' ), array(
                     'player_id' => $player_id,
                     'player_name' => $players[ $player_id ]['player_name'],
                 ) );
                 $playerPenaltyPoints--;
             }
+            if (0 == $playerPenaltyPoints)
+            {
+                self::incStat( 1, "getNoPenalties", $player_id );
+                self::notifyAllPlayers( "points", clienttranslate( '${player_name} did not take any penalties' ), array(
+                    'player_id' => $player_id,
+                    'player_name' => $players[ $player_id ]['player_name']
+                ) );
+            }
             $player_to_points[$player_id] = $playerPenaltyPoints;
-            /*if( $points != 0 )
-                $nbr_nonzero_score ++;*/
         }
 
-        /*$bOnePlayerGetsAll = ( $nbr_nonzero_score == 1 );
-
-        if( $bOnePlayerGetsAll )
-        {
-            // Only 1 player score points during this hand
-            // => he score 0 and everyone scores -26
-            foreach( $player_to_hearts as $player_id => $points )
-            {
-                if( $points != 0 )
-                {
-                    $player_to_points[ $player_id ] = 0;
-
-                    // Notify it!
-                    self::notifyAllPlayers( "onePlayerGetsAll", clienttranslate( '${player_name} gets all hearts and the Queen of Spades: everyone else loose 26 points!' ), array(
-                        'player_id' => $player_id,
-                        'player_name' => $players[ $player_id ]['player_name']
-                    ) );
-                    
-                    self::incStat( 1, "getAllPointCards", $player_id );
-                }
-                else
-                    $player_to_points[ $player_id ] = 26;
-            }                
-        }*/
-        
         // Apply scores to player
         foreach( $player_to_points as $player_id => $points )
         {
