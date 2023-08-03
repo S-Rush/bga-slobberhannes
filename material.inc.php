@@ -31,11 +31,6 @@ $this->card_types = array(
 );
 
 */
-/*
-const SUIT_SPADES = 1;
-const SUIT_HEARTS = 2;
-const SUIT_CLUBS = 3;
-const SUIT_DIAMONDS = 4;*/
 
 $this->colors = array(
   1 => array( 'name' => clienttranslate('spade'),
@@ -47,11 +42,6 @@ $this->colors = array(
   4 => array( 'name' => clienttranslate('diamond'),
               'nametr' => self::_('diamond') )
 );
-/*
-const VALUE_JACK = 11;
-const VALUE_QUEEN = 12;
-const VALUE_KING = 13;
-const VALUE_ACE = 14;*/
 
 $this->values_label = array(
   2 =>'2',

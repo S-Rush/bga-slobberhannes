@@ -19,6 +19,16 @@
 
 require_once( APP_GAMEMODULE_PATH.'module/table/table.game.php' );
 
+const SUIT_SPADES = 1;
+const SUIT_HEARTS = 2;
+const SUIT_CLUBS = 3;
+const SUIT_DIAMONDS = 4;
+
+const VALUE_JACK = 11;
+const VALUE_QUEEN = 12;
+const VALUE_KING = 13;
+const VALUE_ACE = 14;
+
 
 class Slobberhannes extends Table
 {
