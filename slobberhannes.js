@@ -124,11 +124,6 @@ function (dojo, declare) {
             case 'playerTurn':
                 this.addTooltip( 'myhand', _('Cards in my hand'), _('Play a card') );
                 break;
-
-            case 'giveCards':
-                this.addTooltip( 'myhand', _('Cards in my hand'), _('Select a card') );
-                break;
-
                 
             case 'dummmy':
                 break;
@@ -157,16 +152,6 @@ function (dojo, declare) {
         {
             console.log( 'onUpdateActionButtons: '+stateName );
                       
-            if( this.isCurrentPlayerActive() )
-            {            
-                switch( stateName )
-                {
-                case 'giveCards':
-                    this.addActionButton( 'giveCards_button', _('Give selected cards'), 'onGiveCards' ); 
-                    break;
-
-                }
-            }
         },        
         
         ///////////////////////////////////////////////////
@@ -254,38 +239,11 @@ function (dojo, declare) {
 
                     this.playerHand.unselectAll();
                 }
-                else if( this.checkAction( 'giveCards' ) )
-                {
-                    // Can give cards => let the player select some cards
-                }
                 else
                 {
                     this.playerHand.unselectAll();
                 }                
             }
-        },
-        
-        onGiveCards: function()
-        {
-            if( this.checkAction( 'giveCards' ) )
-            {
-                var items = this.playerHand.getSelectedItems();
-
-                if( items.length != 3 )
-                {
-                    this.showMessage( _("You must select exactly 3 cards"), 'error' );
-                    return;
-                }
-                
-                // Give these 3 cards
-                var to_give = '';
-                for( var i in items )
-                {
-                    to_give += items[i].id+';';
-                }
-                this.ajaxcall( "/slobberhannes/slobberhannes/giveCards.html", { cards: to_give, lock: true }, this, function( result ) {
-                }, function( is_error) { } );                
-            }        
         },
         
         ///////////////////////////////////////////////////
@@ -311,10 +269,6 @@ function (dojo, declare) {
             this.notifqueue.setSynchronous( 'trickWin', 1000 );
             dojo.subscribe( 'giveAllCardsToPlayer', this, "notif_giveAllCardsToPlayer" );
             dojo.subscribe( 'newScores', this, "notif_newScores" );
-            dojo.subscribe( 'giveCards', this, "notif_giveCards" );
-            dojo.subscribe( 'takeCards', this, "notif_takeCards" );
-
-            
         },
         
         // TODO: from this point and below, you can write your game notifications handling methods
@@ -362,26 +316,6 @@ function (dojo, declare) {
                 this.scoreCtrl[ player_id ].toValue( notif.args.newScores[ player_id ] );
             }
         },
-        notif_giveCards: function( notif )
-        {
-            // Remove cards from the hand (they have been given)
-            for( var i in notif.args.cards )
-            {
-                var card_id = notif.args.cards[i];
-                this.playerHand.removeFromStockById( card_id );
-            }
-        },
-        notif_takeCards: function( notif )
-        {
-            // Cards taken from some opponent
-            for( var i in notif.args.cards )
-            {
-                var card = notif.args.cards[i];
-                var color = card.type;
-                var value = card.type_arg;
-                this.playerHand.addToStockWithId( this.getCardUniqueId( color, value ), card.id );
-            }
-        }
         
            
    });             

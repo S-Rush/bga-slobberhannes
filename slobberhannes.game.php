@@ -590,50 +590,13 @@ class Slobberhannes extends Table
                 
         $players = self::loadPlayersBasicInfos();
         
-        // Gets all "hearts" + queen of spades
-        /*$player_with_queen_of_spades = null;
-        $player_to_hearts = array();
-        $player_to_points = array();
-        foreach( $players as $player_id => $player )
-        {
-            $player_to_hearts[ $player_id ] = 0;
-            $player_to_points[ $player_id ] = 0;
-        }   */
-        
-        /*$cards = $this->cards->getCardsInLocation( "cardswon" );
-        foreach( $cards as $card )
-        {
-            $player_id = $card['location_arg'];
-            
-            if( $card['type'] == 1 && $card['type_arg'] == 12 )    // Note: 1 = spade && 12 = queen
-            {
-                // Queen of club => 13 points
-                $player_to_points[ $player_id ] += 13;
-                $player_with_queen_of_spades = $player_id;
-            }
-            else if( $card['type'] == 2 )   // Note: 2 = heart
-            {
-                $player_to_hearts[ $player_id ] ++;                    
-                $player_to_points[ $player_id ] ++; 
-            }
-        }*/
-
-        /*
-                self::setGameStateInitialValue( 'playerTookFirstTrick', 0 );
-        self::setGameStateInitialValue( 'playerTookQueenOfClubs', 0 );
-        self::setGameStateInitialValue( 'playerTookLastTrick', 0 );
-        */
-        
-
-        
-        // If someone gets all hearts and the queen of club => 26 points for eveyone
-        //$nbr_nonzero_score = 0;
         $player_to_points = array();
         foreach( $players as $player_id => $player )
         {
             $playerPenaltyPoints = 0;
             if ($player_id == self::getGameStateValue('playerTookFirstTrick'))
             {
+                self::incStat( 1, "getFirstTrick", $player_id );
                 self::notifyAllPlayers( "penalty", clienttranslate( '${player_name} took the first trick penalty and loses 1 point' ), array(
                     'player_id' => $player_id,
                     'player_name' => $players[ $player_id ]['player_name'],
