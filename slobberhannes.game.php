@@ -120,9 +120,9 @@ class Slobberhannes extends Table
          $cards = array();
          foreach( $this->colors as  $color_id => $color ) // spade, heart, diamond, club
          {
-             for( $value=7; $value<=14; $value++ )   //  7, 8, ... K, A
+             for( $value=7; $value<=VALUE_ACE; $value++ )   //  7, 8, ... K, A
              {
-                if (4 != $players_nbr && 7 == $value && (1 == $color_id || 3 == $color_id)) // For 3, 5, or 6 players, exclude 7s of spades and clubs
+                if (4 != $players_nbr && 7 == $value && (SUIT_SPADES == $color_id || SUIT_CLUBS == $color_id)) // For 3, 5, or 6 players, exclude 7s of spades and clubs
                 {
                     continue;
                 }
@@ -323,8 +323,7 @@ class Slobberhannes extends Table
             $bIsInHand = false;
             $currentCard = null;
             $bAtLeastOneCardOfCurrentTrickColor = false;
-            //$bAtLeastOneCardWithoutPoints = false;
-            //$bAtLeastOneCardNotHeart = false;
+
             foreach( $playerhands as $card )
             {
                 if( $card['id'] == $card_id )
@@ -334,67 +333,20 @@ class Slobberhannes extends Table
                 }
                 
                 if( $card['type'] == $currentTrickColor )
-                    $bAtLeastOneCardOfCurrentTrickColor = true;
-    
-                /*if( $card['type'] != 2 )
-                    $bAtLeastOneCardNotHeart = true;
-                    
-                if( $card['type'] == 2 || ( $card['type'] == 1 && $card['type_arg'] == 12  ) )
                 {
-                    // This is a card with point
+                    $bAtLeastOneCardOfCurrentTrickColor = true;
                 }
-                else
-                    $bAtLeastOneCardWithoutPoints = true;*/
             }
             if( ! $bIsInHand )
+            {
                 throw new BgaUserException( "This card is not in your hand" );
+            }
                 
-            /*if( $this->cards->countCardInLocation( 'hand' ) == 52 )
+            if( $currentTrickColor != 0
+                && $bAtLeastOneCardOfCurrentTrickColor 
+                && $currentCard['type'] != $currentTrickColor)
             {
-                // If this is the first card of the hand, it must be 2-club
-                // Note: first card of the hand <=> cards on hands == 52
-    
-                if( $currentCard['type'] != 3 || $currentCard['type_arg'] != 2 ) // Club 2
-                    throw new feException( self::_("You must play the Club-2"), true );                
-            }
-            else */ if( $currentTrickColor == 0 )
-            {
-                // Otherwise, if this is the first card of the trick, any cards can be played
-                // except a Heart if:
-                // _ no heart has been played, and
-                // _ player has at least one non-heart
-                /*if( self::getGameStateValue( 'alreadyPlayedHearts')==0
-                 && $currentCard['type'] == 2   // this is a heart
-                 && $bAtLeastOneCardNotHeart )
-                {
-                    throw new feException( self::_("You can't play a heart to start the trick if no heart has been played before"), true );
-                }*/
-            }
-            else
-            {
-                // The trick started before => we must check the color
-                if( $bAtLeastOneCardOfCurrentTrickColor )
-                {
-                    if( $currentCard['type'] != $currentTrickColor )
-                        throw new BgaUserException ( sprintf( self::_("You must play a %s"), $this->colors[ $currentTrickColor ]['nametr'] ), true );
-                }
-                else
-                {
-                    // The player has no card of current trick color => he can plays what he want to
-                    
-                    /*if( $bFirstCard && $bAtLeastOneCardWithoutPoints )
-                    {
-                        // ...except if it is the first card played by this player during this hand
-                        // (it is forbidden to play card with points during the first trick)
-                        // (note: if player has only cards with points, this does not apply)
-                        
-                        if( $currentCard['type'] == 2 || ( $currentCard['type'] == 1 && $currentCard['type_arg'] == 12  ) )
-                        {
-                            // This is a card with point                  
-                            throw new feException( self::_("You can't play cards with points during the first trick"), true );
-                        }
-                    }*/
-                }
+                throw new BgaUserException ( sprintf( self::_("You must play a %s"), $this->colors[ $currentTrickColor ]['nametr'] ), true );
             }
             
             // Checks are done! now we can play our card
@@ -474,12 +426,12 @@ class Slobberhannes extends Table
     */
     function stNewHand()
     {
-    
+        self::incStat( 1, "handNbr" );
         // Take back all cards (from any location => null) to deck
         $this->cards->moveAllCardsInLocation( null, "deck" );
         $this->cards->shuffle( 'deck' );
     
-        // Deal 13 cards to each players
+        // Deal cards to each players
         // Create deck, shuffle it and give 13 initial cards
         $players = self::loadPlayersBasicInfos();
         foreach( $players as $player_id => $player )
@@ -521,7 +473,7 @@ class Slobberhannes extends Table
             
             foreach( $cards_on_table as $card )
             {
-                if ( $card['type'] == 3 && $card['type_arg'] == 12)
+                if ( $card['type'] == SUIT_CLUBS && $card['type_arg'] == VALUE_QUEEN)
                 {
                     $bContainsQueenOfClubs = 1;
                 }
@@ -552,8 +504,6 @@ class Slobberhannes extends Table
             if ($bContainsQueenOfClubs) self::setGameStateValue('playerTookQueenOfClubs', $best_value_player_id);
 
             // Notify
-            // Note: we use 2 notifications here in order we can pause the display during the first notification
-            //  before we move all cards to the winner (during the second)
             $players = self::loadPlayersBasicInfos();
             self::notifyAllPlayers( 'trickWin', clienttranslate('${player_name} wins the trick'), array(
                 'player_id' => $best_value_player_id,
@@ -654,39 +604,6 @@ class Slobberhannes extends Table
                 $sql = "UPDATE player SET player_score=player_score+$points
                         WHERE player_id='$player_id' " ;
                 self::DbQuery( $sql );
-
-                // Now, notify about the point lost.                
-                /*if( ! $bOnePlayerGetsAll )  // Note: if one player gets all, we already notify everyone so there's no need to send additional notifications
-                {
-                    $heart_number = $player_to_hearts[ $player_id ];
-                    if( $player_id == $player_with_queen_of_spades )
-                    {
-                        self::notifyAllPlayers( "points", clienttranslate( '${player_name} gets ${nbr} hearts and the Queen of Spades and looses ${points} points' ), array(
-                            'player_id' => $player_id,
-                            'player_name' => $players[ $player_id ]['player_name'],
-                            'nbr' => $heart_number,
-                            'points' => $points
-                        ) );
-                    }
-                    else
-                    {
-                        self::notifyAllPlayers( "points", clienttranslate( '${player_name} gets ${nbr} hearts and looses ${nbr} points' ), array(
-                            'player_id' => $player_id,
-                            'player_name' => $players[ $player_id ]['player_name'],
-                            'nbr' => $heart_number
-                        ) );
-                    }
-                }*/
-            }
-            else
-            {
-                // No point lost (just notify)
-                self::notifyAllPlayers( "points", clienttranslate( '${player_name} did not take any penalties' ), array(
-                    'player_id' => $player_id,
-                    'player_name' => $players[ $player_id ]['player_name']
-                ) );
-                
-                //self::incStat( 1, "getNoPointCards", $player_id );
             }
         }
 
