@@ -184,7 +184,7 @@ class Slobberhannes extends Table
         $maxPoints = self::getStartingPointCount();
         $minimumScore = self::getUniqueValueFromDb( "SELECT MIN( player_score ) FROM player" );
 
-        return ($maxPoints - $minimumScore) / $maxPoints;
+        return 100 * (($maxPoints - $minimumScore) / $maxPoints);
     }
 
 
@@ -266,6 +266,311 @@ class Slobberhannes extends Table
         $players_nbr = count( $players );
         $hand_size_map = array(3 => 10, 4=> 8, 5=> 6, 6 => 5);
         return $hand_size_map[$players_nbr];
+    }
+
+    // Hopefully this strat is smart enough to make zombied games not totally unbearable
+    // It won't be remotely close to good enough to the point where that would be a problem
+    function getZombieCardId()
+    {
+        $players = self::loadPlayersBasicInfos();
+        $players_nbr = count( $players );
+
+        $player_id = self::getActivePlayerId();
+        $playerhands = $this->cards->getCardsInLocation( 'hand', $player_id );
+        $cardsOnTable = $this->cards->getCardsInLocation('cardsontable');
+        // Mr. Zombie is smart enough to remember if the Queen of Clubs has been played.
+        // Not planning to give him better memory than that
+        $cardsWon = $this->cards->getCardsInLocation('cardswon');
+
+        $bFirstTrick = ( count( $playerhands ) == $this->getHandSize() );
+        $bLastTrick = (1 == count($playerhands));
+        
+        $currentTrickColor = self::getGameStateValue( 'trickColor' ) ;
+        $bAmFirstPlayer = (0 == $currentTrickColor);
+        $bAmLastPlayer = (count($cardsOnTable) == $players_nbr - 1);
+
+        $bQueenClubIsInTrick = false;
+        $bQueenClubIsNotInTrick = false;
+        $bQueenClubIsMaybeInTrick = false;
+
+        $bAmPlayingInSuit = false;
+
+        foreach( $cardsWon as $card )
+        {
+            if( $card['type'] == SUIT_CLUBS && $card['type_arg'] == VALUE_QUEEN )
+            {
+                $bQueenClubIsNotInTrick = true;
+            }
+        }
+        foreach ($cardsOnTable as $card)
+        {
+            if ($card['type'] == SUIT_CLUBS && $card['type_arg'] == VALUE_QUEEN)
+            {
+                $bQueenClubIsInTrick = true;
+                $bQueenClubIsMaybeInTrick = true;
+            }
+        }
+        foreach ($playerhands as $card)
+        {
+            if ($card['type'] == SUIT_CLUBS && $card['type_arg'] == VALUE_QUEEN)
+            {
+                $bQueenClubIsNotInTrick = true; // well, it may be in the trick if we're forced to play it, but that means we have no choice anyways
+            }
+        }
+        if (!$bQueenClubIsNotInTrick && !$bAmLastPlayer)
+        {
+            $bQueenClubIsMaybeInTrick = true;
+        }
+
+        $cardsInSuit = array();
+        $cardsOutOfSuit = array();
+
+        foreach ($playerhands as $card)
+        {
+            if ($card['type'] == $currentTrickColor)
+            {
+                $bAmPlayingInSuit = true;
+                $cardsInSuit[] = $card;
+            }
+            else
+            {
+                $cardsOutOfSuit[] = $card;
+            }
+        }
+
+        // Now that we gathered all that info, actually pick something to play
+        // Last trick: turns out we didn't need to think about any of that info
+        if ($bLastTrick)
+        {
+            return array_pop($playerhands)['id'];
+        }
+        // First trick:
+        // 1. If leading, play the lowest card in hand
+        // 2. If matching suit, play lowest card in hand (note: we could be smarter and play a high card if we know we have to take the trikc... maybe a change to make later)
+        // 3. If not matching suit, get rid of the best card possible
+        if ($bFirstTrick)
+        {
+            if ($bAmFirstPlayer)
+            {
+                return $this->getLowestCard($cardsOutOfSuit)['id'];
+            }
+            else if ($bAmPlayingInSuit)
+            {
+                return $this->getLowestCard($cardsInSuit)['id'];
+            }
+            else
+            {
+                return $this->getPrioritySlough($cardsOutOfSuit)['id'];
+            }
+        }
+        // Normal trick:
+        // 1. If we're leading, play the priority lead
+        // 2. If we're out of suit, play the priority slough
+        // 3. If we're in suit and the suit is clubs:
+            // a. If Queen could possibly be played, play our highest card below it (if possible), else play highest
+            // b. If Queen cannot possibly be played by someone else, play our highest
+        // 4. If we're in suit for a different suit:
+            // a. If Queen could possibly be played, always be a wimp and play the lowest card we have in suit
+            // b. If Queen cannot possible be played, play our highest
+        if ($bAmFirstPlayer)
+        {
+            return $this->getPriorityLead($cardsOutOfSuit)['id'];
+        }
+        if (!$bAmPlayingInSuit)
+        {
+            return $this->getPrioritySlough($cardsOutOfSuit)['id'];
+        }
+        if (SUIT_CLUBS == $currentTrickColor)
+        {
+            if ($bQueenClubIsNotInTrick)
+            {
+                return $this->getHighestCard($cardsInSuit)['id'];
+            }
+            else
+            {
+                $belowQueen = $this->getHighestCardBelowQueen($cardsInSuit);
+                if (null != $belowQueen) return $belowQueen['id'];
+                return $this->getHighestCard($cardsInSuit)['id'];
+            }
+        }
+        else
+        {
+            if ($bQueenClubIsNotInTrick)
+            {
+                return $this->getHighestCard($cardsInSuit)['id'];
+            }
+            else
+            {
+                return $this->getLowestCard($cardsInSuit)['id'];
+            }
+        }
+    }
+
+    function getHighestCardBelowQueen($cards)
+    {
+        $highestCard = null;
+        foreach ($cards as $card)
+        {
+            if ($card['type_arg'] < VALUE_QUEEN && (null == $highestCard || $card['type_arg'] > $highestCard['type_arg']))
+            {
+                $highestCard = $card;
+            }
+        }
+        return $highestCard;
+    }
+
+    function getLowestCard($cards)
+    {
+        $lowestCard = null;
+        foreach ($cards as $card)
+        {
+            if (null == $lowestCard || $card['type_arg'] < $lowestCard['type_arg'])
+            {
+                $lowestCard = $card;
+            }
+        }
+        return $lowestCard;
+    }
+
+    function getHighestCard($cards)
+    {
+        $highestCard = null;
+        foreach ($cards as $card)
+        {
+            if (null == $highestCard || $card['type_arg'] > $highestCard['type_arg'])
+            {
+                $highestCard = $card;
+            }
+        }
+        return $highestCard;
+    }
+
+    function getPriorityLead($cards)
+    {
+        // 1. Play highest club to bait, if we don't have Q/K/A of clubs
+        // 2. Void a suit if we can do so immediately
+        // 3. Play the lowest card we have (Mr. Zombie is a wimp)
+        $bHasClubsQka = false;
+        $highestClub = null;
+        foreach ($cards as $card)
+        {
+            if ($card['type'] == SUIT_CLUBS)
+            {
+                if ($card['type_arg']  == VALUE_QUEEN || $card['type_arg'] == VALUE_KING || $card['type_arg'] == VALUE_ACE)
+                {
+                    $bHasClubsQka = true;
+                }
+                if (null == $highestClub || $card['type_arg'] > $highestClub['type_arg'])
+                {
+                    $highestClub = $card;
+                }
+            }
+        }
+        if (!$bHasClubsQka && null != $highestClub)
+        {
+            return $highestClub;
+        }
+        $voidingCard = $this->getHighestImmediatelyVoidingCardIfOneExists($cards);
+        if (null != $voidingCard) return $voidingCard;
+        return $this->getLowestCard($cards);
+    }
+
+    function getHighestImmediatelyVoidingCardIfOneExists($cards)
+    {
+        $cardCounts = array(SUIT_CLUBS => 0, SUIT_HEARTS => 0, SUIT_DIAMONDS => 0, SUIT_SPADES => 0);
+        $singleCardIfIsSingle = array(SUIT_CLUBS => null, SUIT_HEARTS => null, SUIT_DIAMONDS => null, SUIT_SPADES => null);
+        foreach ($cards as $card)
+        {
+            $cardCounts[$card['type']]++;
+            $singleCardIfIsSingle[$card['type']] = $card;
+        }
+        $cardsThatWouldVoidSuit = array();
+        foreach ($cardCounts as $suitValue => $suitCount)
+        {
+            if (1 == $suitCount)
+            {
+                $cardsThatWouldVoidSuit[] = $singleCardIfIsSingle[$suitValue];
+            }
+        }
+        if (count($cardsThatWouldVoidSuit) > 0)
+        {
+            return $this->getHighestCard($cardsThatWouldVoidSuit);
+        }
+        return null;
+    }
+
+    function getPrioritySlough($cards)
+    {
+        $queenOfClubs = null;
+        $aceOfClubs = null;
+        $kingOfClubs = null;
+        $cardCounts = array(SUIT_CLUBS => 0, SUIT_HEARTS => 0, SUIT_DIAMONDS => 0, SUIT_SPADES => 0);
+        //$singleCardIfIsSingle = array(SUIT_CLUBS => null, SUIT_HEARTS => null, SUIT_DIAMONDS => null, SUIT_SPADES => null);
+        $highestCardValue = 0;
+        // 1. Drop Queen of Clubs on someone
+        // 2. Get rid of King or Ace of Clubs
+        // 3. Get rid of last card in any suit we only have 1 of (highest of these as tiebreaker)
+        // 4. Get rid of highest card (shortest-suited of these as tiebreaker)
+        foreach ($cards as $card)
+        {
+            $cardCounts[$card['type']]++;
+            //$singleCardIfIsSingle[$card['type']] = $card;
+            if ($card['type'] == SUIT_CLUBS)
+            {
+                if ($card['type_arg']  == VALUE_QUEEN)
+                {
+                    $queenOfClubs = $card;
+                }
+                else if ($card['type_arg'] == VALUE_KING)
+                {
+                    $kingOfClubs = $card;
+                }
+                else if ($card['type_arg'] == VALUE_ACE)
+                {
+                    $aceOfClubs = $card;
+                }
+            }
+            if ($card['type_arg'] > $highestCardValue)
+            {
+                $highestCardValue = $card['type_arg'];
+            }
+        }
+        
+        if (null != $queenOfClubs) return $queenOfClubs;
+        if (null != $aceOfClubs) return $aceOfClubs;
+        if (null != $kingOfClubs) return $kingOfClubs;
+        /*$cardsThatWouldVoidSuit = array();
+        foreach ($cardCounts as $suitValue => $suitCount)
+        {
+            if (1 == $suitCount)
+            {
+                $cardsThatWouldVoidSuit[] = $singleCardIfIsSingle[$suitValue];
+            }
+        }
+        if (count($cardsThatWouldVoidSuit) > 0)
+        {
+            return $this->getHighestCard($cardsThatWouldVoidSuit);
+        }*/
+        $voidingCard = $this->getHighestImmediatelyVoidingCardIfOneExists($cards);
+        if (null != $voidingCard) 
+        {
+            return $voidingCard;
+        }
+
+        $shortestCardWithHighestValue = null;
+        $currentLowestSuitCount = 1000;
+        foreach ($cards as $card)
+        {
+            if ($card['type_arg'] == $highestCardValue)
+            {
+                if ($cardCounts[$card['type']] < $currentLowestSuitCount)
+                {
+                    $shortestCardWithHighestValue = $card;
+                    $currentLowestSuitCount = $cardCounts[$card['type']];
+                }
+            }
+        }
+        return $shortestCardWithHighestValue;
     }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -730,18 +1035,14 @@ class Slobberhannes extends Table
     	
         if ($state['type'] === "activeplayer") {
             switch ($statename) {
+                case 'playerTurn':
+                    $this->playCard($this->getZombieCardId());
+                    break;
                 default:
                     $this->gamestate->nextState( "zombiePass" );
                 	break;
             }
 
-            return;
-        }
-
-        if ($state['type'] === "multipleactiveplayer") {
-            // Make sure player is in a non blocking status for role turn
-            $this->gamestate->setPlayerNonMultiactive( $active_player, '' );
-            
             return;
         }
 
