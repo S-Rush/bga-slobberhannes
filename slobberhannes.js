@@ -265,7 +265,6 @@ function (dojo, declare) {
             
             dojo.subscribe( 'newHand', this, "notif_newHand" );
             dojo.subscribe( 'playCard', this, "notif_playCard" );
-            this.notifqueue.setSynchronous( 'playCard', 100 ); // tiny delay mostly to make zombie turns slightly less instant
             dojo.subscribe( 'trickWin', this, "notif_trickWin" );
             this.notifqueue.setSynchronous( 'trickWin', 1000 );
             dojo.subscribe( 'giveAllCardsToPlayer', this, "notif_giveAllCardsToPlayer" );
