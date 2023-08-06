@@ -1008,11 +1008,11 @@ class Slobberhannes extends Table
         {
             if ($player_id == self::getGameStateValue('playerTookFirstTrick'))
             {
-                $newRow[] = clienttranslate('Yes');
+                $newRow[] = -1;
             }
             else
             {
-                $newRow[] = '-';
+                $newRow[] = 0;
             }
         }
         $table[] = $newRow;
@@ -1023,11 +1023,11 @@ class Slobberhannes extends Table
         {
             if ($player_id == self::getGameStateValue('playerTookLastTrick'))
             {
-                $newRow[] = clienttranslate('Yes');
+                $newRow[] = -1;
             }
             else
             {
-                $newRow[] = '-';
+                $newRow[] = 0;
             }
         }
         $table[] = $newRow;
@@ -1038,11 +1038,11 @@ class Slobberhannes extends Table
         {
             if ($player_id == self::getGameStateValue('playerTookQueenOfClubs'))
             {
-                $newRow[] = clienttranslate('Yes');
+                $newRow[] = -1;
             }
             else
             {
-                $newRow[] = '-';
+                $newRow[] = 0;
             }
         }
         $table[] = $newRow;
@@ -1053,12 +1053,20 @@ class Slobberhannes extends Table
         {
             if ($points == -4)
             {
-                $newRow[] = clienttranslate('Yes');
+                $newRow[] = -1;
             }
             else
             {
-                $newRow[] = '-';
+                $newRow[] = 0;
             }
+        }
+        $table[] = $newRow;
+
+        // Totals
+        $newRow = array( array( 'str' => clienttranslate('Total Points'), 'args' => array() ) );
+        foreach( $player_to_points as $player_id => $points )
+        {
+            $newRow[] = $points;
         }
         $table[] = $newRow;
         
