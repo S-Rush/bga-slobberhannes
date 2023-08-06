@@ -430,7 +430,7 @@ class Slobberhannes extends Table
         // Otherwise, we'll try our hardest to dodge if we're unable to guarantee something low
         if (SUIT_CLUBS == $currentTrickColor)
         {
-            if ($bQueenClubIsNotInTrick) // In this case, we know the Queen of Clubs can't show up anyways, so just take it
+            if ($bQueenClubIsNotInTrick && (null != $myKingOfClubs || null != $myAceOfClubs)) // In this case, we know the Queen of Clubs can't show up anyways, so just take it
             {
                 return $this->getHighestCard($cardsInSuit)['id'];
             }
