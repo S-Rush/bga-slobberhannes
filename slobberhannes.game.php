@@ -295,6 +295,12 @@ class Slobberhannes extends Table
 
         $bAmPlayingInSuit = false;
 
+        $cardsOnTableInSuit = array();
+
+        $myQueenOfClubs = null;
+        $myKingOfClubs = null;
+        $myAceOfClubs = null;
+
         foreach( $cardsWon as $card )
         {
             if( $card['type'] == SUIT_CLUBS && $card['type_arg'] == VALUE_QUEEN )
@@ -309,12 +315,28 @@ class Slobberhannes extends Table
                 $bQueenClubIsInTrick = true;
                 $bQueenClubIsMaybeInTrick = true;
             }
+            if ($card['type'] == $currentTrickColor)
+            {
+                $cardsOnTableInSuit[] = $card;
+            }
         }
+        $highestCardOnTableInSuit = $this->getHighestCard($cardsOnTableInSuit);
+        $highestValueOnTableInSuit = 0;
+        if (null != $highestCardOnTableInSuit) $highestValueOnTableInSuit = $this->getHighestCard($cardsOnTableInSuit)['type_arg'];
         foreach ($playerhands as $card)
         {
             if ($card['type'] == SUIT_CLUBS && $card['type_arg'] == VALUE_QUEEN)
             {
+                $myQueenOfClubs = $card;
                 $bQueenClubIsNotInTrick = true; // well, it may be in the trick if we're forced to play it, but that means we have no choice anyways
+            }
+            if ($card['type'] == SUIT_CLUBS && $card['type_arg'] == VALUE_KING)
+            {
+                $myKingOfClubs = $card;
+            }
+            if ($card['type'] == SUIT_CLUBS && $card['type_arg'] == VALUE_ACE)
+            {
+                $myAceOfClubs = $card;
             }
         }
         if (!$bQueenClubIsNotInTrick && !$bAmLastPlayer)
@@ -346,7 +368,7 @@ class Slobberhannes extends Table
         }
         // First trick:
         // 1. If leading, play the lowest card in hand
-        // 2. If matching suit, play lowest card in hand (note: we could be smarter and play a high card if we know we have to take the trikc... maybe a change to make later)
+        // 2. If matching suit, play lowest card in hand
         // 3. If not matching suit, get rid of the best card possible
         if ($bFirstTrick)
         {
@@ -356,7 +378,17 @@ class Slobberhannes extends Table
             }
             else if ($bAmPlayingInSuit)
             {
-                return $this->getLowestCard($cardsInSuit)['id'];
+                if ($bAmLastPlayer)
+                {
+                    $highestSafeCard = $this->getHighestCardBelowValue($cardsInSuit, $highestValueOnTableInSuit);
+                    if (null != $highestSafeCard) return $highestSafeCard['id'];
+                    // If we're last and can't be safe, might as well get rid of the highest card altogether
+                    return $this->getHighestCard($cardsInSuit)['id'];
+                }
+                else
+                {
+                    return $this->getLowestCard($cardsInSuit)['id'];
+                }
             }
             else
             {
@@ -380,7 +412,9 @@ class Slobberhannes extends Table
         {
             return $this->getPrioritySlough($cardsOutOfSuit)['id'];
         }
-        if (SUIT_CLUBS == $currentTrickColor)
+        // We know for sure whether Queen of Clubs is in the trick, as well as which cards will take the trick
+        // Thus, if we can't dodge the trick, we can take the trick with as high of a card as we have
+        if ($bAmLastPlayer)
         {
             if ($bQueenClubIsNotInTrick)
             {
@@ -388,8 +422,36 @@ class Slobberhannes extends Table
             }
             else
             {
-                $belowQueen = $this->getHighestCardBelowQueen($cardsInSuit);
+                $highestSafeCard = $this->getHighestCardBelowValue($cardsInSuit, $highestValueOnTableInSuit);
+                if (null != $highestSafeCard) return $highestSafeCard['id'];
+                return $this->getHighestCard($cardsInSuit)['id'];
+            }
+        }
+        // Otherwise, we'll try our hardest to dodge if we're unable to guarantee something low
+        if (SUIT_CLUBS == $currentTrickColor)
+        {
+            if ($bQueenClubIsNotInTrick) // In this case, we know the Queen of Clubs can't show up anyways, so just take it
+            {
+                return $this->getHighestCard($cardsInSuit)['id'];
+            }
+            else
+            {
+                // Drop the queen if we can
+                if ($highestValueOnTableInSuit > VALUE_QUEEN && $myQueenOfClubs != null) return $myQueenOfClubs['id'];
+                // Barring that, try to be safe
+                $highestSafeCard = $this->getHighestCardBelowValue($cardsInSuit, $highestValueOnTableInSuit);
+                if (null != $highestSafeCard) return $highestSafeCard['id'];
+                // Clubs is a special case because it means we can never take Queen of Clubs with a card below the Queen
+                // Therefore, we don't need to worry about taking the trick in general
+                /// ...but we still checked the table first, in case somebody already played the Ace and we didn't have to boter
+                $belowQueen = $this->getHighestCardBelowValue($cardsInSuit, VALUE_QUEEN);
                 if (null != $belowQueen) return $belowQueen['id'];
+                
+                // Even if we can't play a club below the queen, priority order is K > A > Q
+                if ($myKingOfClubs != null) return $myKingOfClubs['id'];
+                if ($myAceOfClubs != null) return $myAceOfClubs['id'];
+                // We have a card in suit, none that are below Queen, and not the King or Ace... take one guess what this card is
+                // Still leaving a function call as the final catch case just in case the logic gets adjusted later and breaks that
                 return $this->getHighestCard($cardsInSuit)['id'];
             }
         }
@@ -401,17 +463,19 @@ class Slobberhannes extends Table
             }
             else
             {
+                $highestSafeCard = $this->getHighestCardBelowValue($cardsInSuit, $highestValueOnTableInSuit);
+                if (null != $highestSafeCard) return $highestSafeCard['id'];
                 return $this->getLowestCard($cardsInSuit)['id'];
             }
         }
     }
 
-    function getHighestCardBelowQueen($cards)
+    function getHighestCardBelowValue($cards, $value)
     {
         $highestCard = null;
         foreach ($cards as $card)
         {
-            if ($card['type_arg'] < VALUE_QUEEN && (null == $highestCard || $card['type_arg'] > $highestCard['type_arg']))
+            if ($card['type_arg'] < $value && (null == $highestCard || $card['type_arg'] > $highestCard['type_arg']))
             {
                 $highestCard = $card;
             }
@@ -452,6 +516,7 @@ class Slobberhannes extends Table
         // 3. Play the lowest card we have (Mr. Zombie is a wimp)
         $bHasClubsQka = false;
         $highestClub = null;
+        $nonClubsQkaCards = array();
         foreach ($cards as $card)
         {
             if ($card['type'] == SUIT_CLUBS)
@@ -460,17 +525,25 @@ class Slobberhannes extends Table
                 {
                     $bHasClubsQka = true;
                 }
+                else
+                {
+                    $nonClubsQkaCards[] = $card;
+                }
                 if (null == $highestClub || $card['type_arg'] > $highestClub['type_arg'])
                 {
                     $highestClub = $card;
                 }
+            }
+            else
+            {
+                $nonClubsQkaCards[] = $card;
             }
         }
         if (!$bHasClubsQka && null != $highestClub)
         {
             return $highestClub;
         }
-        $voidingCard = $this->getHighestImmediatelyVoidingCardIfOneExists($cards);
+        $voidingCard = $this->getHighestImmediatelyVoidingCardIfOneExists($nonClubsQkaCards);
         if (null != $voidingCard) return $voidingCard;
         return $this->getLowestCard($cards);
     }
