@@ -1063,7 +1063,7 @@ class Slobberhannes extends Table
         $table[] = $newRow;
 
         // Totals
-        $newRow = array( array( 'str' => clienttranslate('Total Points'), 'args' => array() ) );
+        $newRow = array( array( 'str' => clienttranslate('Total'), 'args' => array() ) );
         foreach( $player_to_points as $player_id => $points )
         {
             $newRow[] = $points;
