@@ -19,15 +19,15 @@
 
 require_once( APP_GAMEMODULE_PATH.'module/table/table.game.php' );
 
-const SUIT_SPADES = 1;
-const SUIT_HEARTS = 2;
-const SUIT_CLUBS = 3;
-const SUIT_DIAMONDS = 4;
+const SLOBBERHANNES_SUIT_SPADES = 1;
+const SLOBBERHANNES_SUIT_HEARTS = 2;
+const SLOBBERHANNES_SUIT_CLUBS = 3;
+const SLOBBERHANNES_SUIT_DIAMONDS = 4;
 
-const VALUE_JACK = 11;
-const VALUE_QUEEN = 12;
-const VALUE_KING = 13;
-const VALUE_ACE = 14;
+const SLOBBERHANNES_VALUE_JACK = 11;
+const SLOBBERHANNES_VALUE_QUEEN = 12;
+const SLOBBERHANNES_VALUE_KING = 13;
+const SLOBBERHANNES_VALUE_ACE = 14;
 
 
 class Slobberhannes extends Table
@@ -120,9 +120,9 @@ class Slobberhannes extends Table
          $cards = array();
          foreach( $this->colors as  $color_id => $color ) // spade, heart, diamond, club
          {
-             for( $value=7; $value<=VALUE_ACE; $value++ )   //  7, 8, ... K, A
+             for( $value=7; $value<=SLOBBERHANNES_VALUE_ACE; $value++ )   //  7, 8, ... K, A
              {
-                if (4 != $players_nbr && 7 == $value && (SUIT_SPADES == $color_id || SUIT_CLUBS == $color_id)) // For 3, 5, or 6 players, exclude 7s of spades and clubs
+                if (4 != $players_nbr && 7 == $value && (SLOBBERHANNES_SUIT_SPADES == $color_id || SLOBBERHANNES_SUIT_CLUBS == $color_id)) // For 3, 5, or 6 players, exclude 7s of spades and clubs
                 {
                     continue;
                 }
@@ -303,14 +303,14 @@ class Slobberhannes extends Table
 
         foreach( $cardsWon as $card )
         {
-            if( $card['type'] == SUIT_CLUBS && $card['type_arg'] == VALUE_QUEEN )
+            if( $card['type'] == SLOBBERHANNES_SUIT_CLUBS && $card['type_arg'] == SLOBBERHANNES_VALUE_QUEEN )
             {
                 $bQueenClubIsNotInTrick = true;
             }
         }
         foreach ($cardsOnTable as $card)
         {
-            if ($card['type'] == SUIT_CLUBS && $card['type_arg'] == VALUE_QUEEN)
+            if ($card['type'] == SLOBBERHANNES_SUIT_CLUBS && $card['type_arg'] == SLOBBERHANNES_VALUE_QUEEN)
             {
                 $bQueenClubIsInTrick = true;
                 $bQueenClubIsMaybeInTrick = true;
@@ -325,16 +325,16 @@ class Slobberhannes extends Table
         if (null != $highestCardOnTableInSuit) $highestValueOnTableInSuit = $this->getHighestCard($cardsOnTableInSuit)['type_arg'];
         foreach ($playerhands as $card)
         {
-            if ($card['type'] == SUIT_CLUBS && $card['type_arg'] == VALUE_QUEEN)
+            if ($card['type'] == SLOBBERHANNES_SUIT_CLUBS && $card['type_arg'] == SLOBBERHANNES_VALUE_QUEEN)
             {
                 $myQueenOfClubs = $card;
                 $bQueenClubIsNotInTrick = true; // well, it may be in the trick if we're forced to play it, but that means we have no choice anyways
             }
-            if ($card['type'] == SUIT_CLUBS && $card['type_arg'] == VALUE_KING)
+            if ($card['type'] == SLOBBERHANNES_SUIT_CLUBS && $card['type_arg'] == SLOBBERHANNES_VALUE_KING)
             {
                 $myKingOfClubs = $card;
             }
-            if ($card['type'] == SUIT_CLUBS && $card['type_arg'] == VALUE_ACE)
+            if ($card['type'] == SLOBBERHANNES_SUIT_CLUBS && $card['type_arg'] == SLOBBERHANNES_VALUE_ACE)
             {
                 $myAceOfClubs = $card;
             }
@@ -428,7 +428,7 @@ class Slobberhannes extends Table
             }
         }
         // Otherwise, we'll try our hardest to dodge if we're unable to guarantee something low
-        if (SUIT_CLUBS == $currentTrickColor)
+        if (SLOBBERHANNES_SUIT_CLUBS == $currentTrickColor)
         {
             if ($bQueenClubIsNotInTrick && (null != $myKingOfClubs || null != $myAceOfClubs)) // In this case, we know the Queen of Clubs can't show up anyways, so just take it
             {
@@ -437,14 +437,14 @@ class Slobberhannes extends Table
             else
             {
                 // Drop the queen if we can
-                if ($highestValueOnTableInSuit > VALUE_QUEEN && $myQueenOfClubs != null) return $myQueenOfClubs['id'];
+                if ($highestValueOnTableInSuit > SLOBBERHANNES_VALUE_QUEEN && $myQueenOfClubs != null) return $myQueenOfClubs['id'];
                 // Barring that, try to be safe
                 $highestSafeCard = $this->getHighestCardBelowValue($cardsInSuit, $highestValueOnTableInSuit);
                 if (null != $highestSafeCard) return $highestSafeCard['id'];
                 // Clubs is a special case because it means we can never take Queen of Clubs with a card below the Queen
                 // Therefore, we don't need to worry about taking the trick in general
                 /// ...but we still checked the table first, in case somebody already played the Ace and we didn't have to boter
-                $belowQueen = $this->getHighestCardBelowValue($cardsInSuit, VALUE_QUEEN);
+                $belowQueen = $this->getHighestCardBelowValue($cardsInSuit, SLOBBERHANNES_VALUE_QUEEN);
                 if (null != $belowQueen) return $belowQueen['id'];
                 
                 // Even if we can't play a club below the queen, priority order is K > A > Q
@@ -519,9 +519,9 @@ class Slobberhannes extends Table
         $nonClubsQkaCards = array();
         foreach ($cards as $card)
         {
-            if ($card['type'] == SUIT_CLUBS)
+            if ($card['type'] == SLOBBERHANNES_SUIT_CLUBS)
             {
-                if ($card['type_arg']  == VALUE_QUEEN || $card['type_arg'] == VALUE_KING || $card['type_arg'] == VALUE_ACE)
+                if ($card['type_arg']  == SLOBBERHANNES_VALUE_QUEEN || $card['type_arg'] == SLOBBERHANNES_VALUE_KING || $card['type_arg'] == SLOBBERHANNES_VALUE_ACE)
                 {
                     $bHasClubsQka = true;
                 }
@@ -550,8 +550,8 @@ class Slobberhannes extends Table
 
     function getHighestImmediatelyVoidingCardIfOneExists($cards)
     {
-        $cardCounts = array(SUIT_CLUBS => 0, SUIT_HEARTS => 0, SUIT_DIAMONDS => 0, SUIT_SPADES => 0);
-        $singleCardIfIsSingle = array(SUIT_CLUBS => null, SUIT_HEARTS => null, SUIT_DIAMONDS => null, SUIT_SPADES => null);
+        $cardCounts = array(SLOBBERHANNES_SUIT_CLUBS => 0, SLOBBERHANNES_SUIT_HEARTS => 0, SLOBBERHANNES_SUIT_DIAMONDS => 0, SLOBBERHANNES_SUIT_SPADES => 0);
+        $singleCardIfIsSingle = array(SLOBBERHANNES_SUIT_CLUBS => null, SLOBBERHANNES_SUIT_HEARTS => null, SLOBBERHANNES_SUIT_DIAMONDS => null, SLOBBERHANNES_SUIT_SPADES => null);
         foreach ($cards as $card)
         {
             $cardCounts[$card['type']]++;
@@ -577,8 +577,8 @@ class Slobberhannes extends Table
         $queenOfClubs = null;
         $aceOfClubs = null;
         $kingOfClubs = null;
-        $cardCounts = array(SUIT_CLUBS => 0, SUIT_HEARTS => 0, SUIT_DIAMONDS => 0, SUIT_SPADES => 0);
-        //$singleCardIfIsSingle = array(SUIT_CLUBS => null, SUIT_HEARTS => null, SUIT_DIAMONDS => null, SUIT_SPADES => null);
+        $cardCounts = array(SLOBBERHANNES_SUIT_CLUBS => 0, SLOBBERHANNES_SUIT_HEARTS => 0, SLOBBERHANNES_SUIT_DIAMONDS => 0, SLOBBERHANNES_SUIT_SPADES => 0);
+        //$singleCardIfIsSingle = array(SLOBBERHANNES_SUIT_CLUBS => null, SLOBBERHANNES_SUIT_HEARTS => null, SLOBBERHANNES_SUIT_DIAMONDS => null, SLOBBERHANNES_SUIT_SPADES => null);
         $highestCardValue = 0;
         // 1. Drop Queen of Clubs on someone
         // 2. Get rid of King or Ace of Clubs
@@ -588,17 +588,17 @@ class Slobberhannes extends Table
         {
             $cardCounts[$card['type']]++;
             //$singleCardIfIsSingle[$card['type']] = $card;
-            if ($card['type'] == SUIT_CLUBS)
+            if ($card['type'] == SLOBBERHANNES_SUIT_CLUBS)
             {
-                if ($card['type_arg']  == VALUE_QUEEN)
+                if ($card['type_arg']  == SLOBBERHANNES_VALUE_QUEEN)
                 {
                     $queenOfClubs = $card;
                 }
-                else if ($card['type_arg'] == VALUE_KING)
+                else if ($card['type_arg'] == SLOBBERHANNES_VALUE_KING)
                 {
                     $kingOfClubs = $card;
                 }
-                else if ($card['type_arg'] == VALUE_ACE)
+                else if ($card['type_arg'] == SLOBBERHANNES_VALUE_ACE)
                 {
                     $aceOfClubs = $card;
                 }
@@ -851,7 +851,7 @@ class Slobberhannes extends Table
             
             foreach( $cards_on_table as $card )
             {
-                if ( $card['type'] == SUIT_CLUBS && $card['type_arg'] == VALUE_QUEEN)
+                if ( $card['type'] == SLOBBERHANNES_SUIT_CLUBS && $card['type_arg'] == SLOBBERHANNES_VALUE_QUEEN)
                 {
                     $bContainsQueenOfClubs = 1;
                 }
