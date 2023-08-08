@@ -717,7 +717,7 @@ class Slobberhannes extends Table
             }
             if( ! $bIsInHand )
             {
-                throw new BgaUserException( "This card is not in your hand" );
+                throw new BgaUserException( self::_("This card is not in your hand") );
             }
                 
             if( $currentTrickColor != 0
