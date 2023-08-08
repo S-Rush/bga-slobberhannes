@@ -1,7 +1,7 @@
 /**
  *------
  * BGA framework: © Gregory Isabelli <gisabelli@boardgamearena.com> & Emmanuel Colin <ecolin@boardgamearena.com>
- * Hearts implementation : © Gregory Isabelli <gisabelli@boardgamearena.com>
+ * Slobberhannes implementation : © Sam Rush <swrush98@yahoo.com>
  *
  * This code has been produced on the BGA studio platform for use on http://boardgamearena.com.
  * See http://en.boardgamearena.com/#!doc/Studio for more information.
@@ -29,7 +29,7 @@ define([
 function (dojo, declare) {
     return declare("bgagame.slobberhannes", ebg.core.gamegui, {
         constructor: function(){
-            console.log('slobberhannes constructor');
+           // console.log('slobberhannes constructor');
 
             // Here, you can init the global variables of your user interface
             // Example:
@@ -55,7 +55,7 @@ function (dojo, declare) {
         */        
         setup: function( gamedatas )
         {
-            console.log( "start creating player boards" );
+            //console.log( "start creating player boards" );
             for( var player_id in gamedatas.players )
             {
                 var player = gamedatas.players[player_id];
@@ -117,7 +117,7 @@ function (dojo, declare) {
         
         onEnteringState: function( stateName, args )
         {
-           console.log( 'Entering state: '+stateName );
+           //console.log( 'Entering state: '+stateName );
             
             switch( stateName )
             {
@@ -135,7 +135,7 @@ function (dojo, declare) {
         //        
         onLeavingState: function( stateName )
         {
-            console.log( 'Leaving state: '+stateName );
+            //console.log( 'Leaving state: '+stateName );
              
           //  switch( stateName )
           //  {
@@ -150,7 +150,7 @@ function (dojo, declare) {
         //                
         onUpdateActionButtons: function( stateName, args )
         {
-            console.log( 'onUpdateActionButtons: '+stateName );
+           // console.log( 'onUpdateActionButtons: '+stateName );
                       
         },        
         
@@ -261,7 +261,7 @@ function (dojo, declare) {
 
         setupNotifications: function()
         {
-            console.log( 'notifications subscriptions setup' );
+            //console.log( 'notifications subscriptions setup' );
             
             dojo.subscribe( 'newHand', this, "notif_newHand" );
             dojo.subscribe( 'playCard', this, "notif_playCard" );
